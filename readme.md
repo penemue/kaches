@@ -20,6 +20,7 @@ Create cache with `LIFE_TIME` eviction with cached values living one second:
         eviction = Eviction.LIFE_TIME
         lifeTime = 1000
         getValue = { key -> key.toString() }
+        currentTimeMillis = { System.currentTimeMillis() }
     }
 ```
 
@@ -29,5 +30,6 @@ Create cache with `IDLE_TIME` eviction with cached values evicted after being un
         eviction = Eviction.IDLE_TIME
         idleTime = 1000
         getValue = { key -> key.toString() }
+        currentTimeMillis = { System.currentTimeMillis() }
     }
 ```
