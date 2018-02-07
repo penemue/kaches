@@ -202,7 +202,7 @@ private class IdleTimeValueEntry<K, out V>(private val config: CacheConfig<K, V>
 private class IdleTimeEvictionCache<K, V>(config: CacheConfig<K, V>) : CacheBase<K, V>(config) {
 
     init {
-        requiredTimeLimit(config.lifeTime, { "Life time should be limited for life-time eviction cache" })
+        requiredTimeLimit(config.idleTime, { "Idle time should be limited for life-time eviction cache" })
     }
 
     override fun newValueEntry(key: K, value: V?): ValueEntry<V> {
@@ -210,6 +210,6 @@ private class IdleTimeEvictionCache<K, V>(config: CacheConfig<K, V>) : CacheBase
     }
 
     override fun keyToEvict(): K {
-        throw IllegalStateException("Cache with life time eviction has unlimited size")
+        throw IllegalStateException("Cache with idle time eviction has unlimited size")
     }
 }
