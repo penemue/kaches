@@ -85,6 +85,7 @@ private sealed class CacheBase<K, V>(protected val config: CacheConfig<K, V>) : 
         val entry = map[key]
         if (entry != null) {
             if (!entry.isObsolete()) {
+                entry.touch()
                 return entry.value
             }
             invalidate(key)
