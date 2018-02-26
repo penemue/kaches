@@ -27,11 +27,11 @@ fun <K, V> cache(configurator: CacheConfig<K, V>.() -> Unit): Cache<K, V> {
 
 interface Cache<in K, out V> {
 
-    fun get(key: K): V?
+    suspend fun get(key: K): V?
 
-    fun contains(key: K): Boolean
+    suspend fun contains(key: K): Boolean
 
-    fun invalidate(key: K): V?
+    suspend fun invalidate(key: K): V?
 
     fun size(): Int
 
@@ -55,9 +55,9 @@ class CacheConfig<K, V> {
 
     var idleTime = Long.MAX_VALUE
 
-    var getValue: (K) -> V? = { throw IllegalArgumentException("Cached value lambda should be set") }
+    var getValue: suspend (K) -> V? = { throw IllegalArgumentException("Cached value lambda should be set") }
 
-    var evictListener: ((K, V?) -> Unit)? = null
+    var evictListener: (suspend (K, V?) -> Unit)? = null
 
     var currentTimeMillis: () -> Long = { throw IllegalArgumentException("Current time lambda should be set"); }
 }
@@ -81,7 +81,7 @@ private sealed class CacheBase<K, V>(protected val config: CacheConfig<K, V>) : 
         }
     }
 
-    override fun get(key: K): V? {
+    suspend override fun get(key: K): V? {
         val entry = map[key]
         if (entry != null) {
             if (!entry.isObsolete()) {
@@ -100,7 +100,7 @@ private sealed class CacheBase<K, V>(protected val config: CacheConfig<K, V>) : 
         return value
     }
 
-    override fun contains(key: K): Boolean {
+    suspend override fun contains(key: K): Boolean {
         val entry = map[key]
         if (entry != null) {
             if (!entry.isObsolete()) {
@@ -111,7 +111,7 @@ private sealed class CacheBase<K, V>(protected val config: CacheConfig<K, V>) : 
         return false
     }
 
-    override fun invalidate(key: K): V? {
+    suspend override fun invalidate(key: K): V? {
         val removedEntry = map.remove(key)
         return removedEntry?.apply { evict(key, this) }?.value
     }
@@ -122,7 +122,7 @@ private sealed class CacheBase<K, V>(protected val config: CacheConfig<K, V>) : 
 
     protected open fun touch(entry: ValueEntry<V>) = entry.touch()
 
-    protected open fun evict(key: K, entry: ValueEntry<V>) {
+    protected suspend open fun evict(key: K, entry: ValueEntry<V>) {
         config.evictListener?.invoke(key, entry.value)
     }
 
@@ -162,7 +162,7 @@ private class RandomEvictionCache<K, V>(config: CacheConfig<K, V>) : CacheBase<K
         return entries.values.first()
     }
 
-    override fun evict(key: K, entry: ValueEntry<V>) {
+    override suspend fun evict(key: K, entry: ValueEntry<V>) {
         entries.remove(entry)
         super.evict(key, entry)
     }
@@ -213,7 +213,7 @@ private class LRUEvictionCache<K, V>(config: CacheConfig<K, V>) : CacheBase<K, V
         }
     }
 
-    override fun evict(key: K, entry: ValueEntry<V>) {
+    suspend override fun evict(key: K, entry: ValueEntry<V>) {
         val lruEntry = entry as LRUValueEntry<*, *>
         lruEntry.queue.remove(lruEntry)
         super.evict(key, entry)
