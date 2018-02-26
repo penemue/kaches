@@ -19,7 +19,7 @@ fun <K, V> cache(configurator: CacheConfig<K, V>.() -> Unit): Cache<K, V> {
     val config = CacheConfig<K, V>().apply(configurator)
     return when (config.eviction) {
         Eviction.RANDOM -> RandomEvictionCache(config)
-        Eviction.LRU -> throw NotImplementedError()
+        Eviction.LRU -> LRUEvictionCache(config)
         Eviction.LIFE_TIME -> LifeTimeEvictionCache(config)
         Eviction.IDLE_TIME -> IdleTimeEvictionCache(config)
     }
@@ -85,7 +85,7 @@ private sealed class CacheBase<K, V>(protected val config: CacheConfig<K, V>) : 
         val entry = map[key]
         if (entry != null) {
             if (!entry.isObsolete()) {
-                entry.touch()
+                touch(entry)
                 return entry.value
             }
             invalidate(key)
@@ -120,8 +120,10 @@ private sealed class CacheBase<K, V>(protected val config: CacheConfig<K, V>) : 
 
     override fun count() = map.size
 
-    protected open fun evict(key: K, valueEntry: ValueEntry<V>) {
-        config.evictListener?.invoke(key, valueEntry.value)
+    protected open fun touch(entry: ValueEntry<V>) = entry.touch()
+
+    protected open fun evict(key: K, entry: ValueEntry<V>) {
+        config.evictListener?.invoke(key, entry.value)
     }
 
     protected abstract fun newValueEntry(key: K, value: V?): ValueEntry<V>
@@ -160,9 +162,76 @@ private class RandomEvictionCache<K, V>(config: CacheConfig<K, V>) : CacheBase<K
         return entries.values.first()
     }
 
-    override fun evict(key: K, valueEntry: ValueEntry<V>) {
-        entries.remove(valueEntry)
-        super.evict(key, valueEntry)
+    override fun evict(key: K, entry: ValueEntry<V>) {
+        entries.remove(entry)
+        super.evict(key, entry)
+    }
+}
+
+private class LRUValueEntry<out K, out V>(var queue: LinkedList,
+                                          val key: K,
+                                          value: V?) : ValueEntry<V>(value), LinkedList.Node {
+
+    init {
+        queue.add(this)
+    }
+
+    override var prev: LinkedList.Node? = null
+
+    override var next: LinkedList.Node? = null
+}
+
+
+private class LRUEvictionCache<K, V>(config: CacheConfig<K, V>) : CacheBase<K, V>(config) {
+
+    private val halfSize: Int
+    private val probationQueue = LinkedList()
+    private val protectedQueue = LinkedList()
+
+    init {
+        requiredSizeLimit(config.size, { "Size should be limited for LRU eviction cache" })
+        halfSize = config.size / 2
+    }
+
+    override fun newValueEntry(key: K, value: V?): ValueEntry<V> {
+        return LRUValueEntry(probationQueue, key, value)
+    }
+
+    override fun keyToEvict(): K {
+        adjustProtectedQueue()
+        @Suppress("UNCHECKED_CAST")
+        val entry = probationQueue.removeLast() as LRUValueEntry<K, *>
+        return entry.key
+    }
+
+    override fun touch(entry: ValueEntry<V>) {
+        val lruEntry = entry as LRUValueEntry<*, *>
+        if (lruEntry.queue === probationQueue) {
+            probationQueue.remove(lruEntry)
+            addEntryToQueue(lruEntry, protectedQueue)
+            adjustProtectedQueue()
+        }
+    }
+
+    override fun evict(key: K, entry: ValueEntry<V>) {
+        val lruEntry = entry as LRUValueEntry<*, *>
+        lruEntry.queue.remove(lruEntry)
+        super.evict(key, entry)
+    }
+
+    private fun adjustProtectedQueue() {
+        while (protectedQueue.size > halfSize) {
+            val entry = protectedQueue.removeLast() as LRUValueEntry<*, *>
+            addEntryToQueue(entry, probationQueue)
+        }
+    }
+
+    companion object {
+
+        private fun addEntryToQueue(entry: LRUValueEntry<*, *>, queue: LinkedList) {
+            queue.add(entry)
+            entry.queue = queue
+        }
     }
 }
 
@@ -202,7 +271,7 @@ private class IdleTimeValueEntry<K, out V>(private val config: CacheConfig<K, V>
 private class IdleTimeEvictionCache<K, V>(config: CacheConfig<K, V>) : CacheBase<K, V>(config) {
 
     init {
-        requiredTimeLimit(config.idleTime, { "Idle time should be limited for life-time eviction cache" })
+        requiredTimeLimit(config.idleTime, { "Idle time should be limited for idle-time eviction cache" })
     }
 
     override fun newValueEntry(key: K, value: V?): ValueEntry<V> {
