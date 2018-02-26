@@ -8,6 +8,15 @@ Generic caches written in [Kotlin](https://kotlinlang.org).
 Create cache with `LRU` eviction having maximum `1000` items:
 ```Kotlin
     val cache = cache<Int, String> {
+        eviction = Eviction.LRU
+        size = 1000
+        getValue = { key -> key.toString() }
+    }
+```
+
+Create cache with `RANDOM` eviction having maximum `1000` items:
+```Kotlin
+    val cache = cache<Int, String> {
         eviction = Eviction.RANDOM
         size = 1000
         getValue = { key -> key.toString() }
