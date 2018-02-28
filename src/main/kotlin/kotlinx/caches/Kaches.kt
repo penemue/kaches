@@ -206,8 +206,12 @@ private class LRUEvictionCache<K, V>(config: CacheConfig<K, V>) : CacheBase<K, V
 
     override fun touch(entry: ValueEntry<V>) {
         val lruEntry = entry as LRUValueEntry<*, *>
-        if (lruEntry.queue === probationQueue) {
-            probationQueue.remove(lruEntry)
+        if (lruEntry.queue === protectedQueue) {
+            // move the entry to the head of protected queue
+            protectedQueue.moveToFirst(entry)
+        } else {
+            // if the entry is in probation queue, move it to protected queue
+            probationQueue.remove(entry)
             addEntryToQueue(lruEntry, protectedQueue)
             adjustProtectedQueue()
         }
