@@ -86,13 +86,13 @@ internal abstract class CacheBase<K, V>(protected val config: CacheConfig<K, V>)
     companion object {
 
         fun requiredSizeLimit(size: Int, exceptionMsg: () -> String) {
-            if (size == Int.MAX_VALUE) {
+            if (size == CacheConfig.NOT_SET_INT) {
                 throw IllegalArgumentException(exceptionMsg())
             }
         }
 
         fun requiredTimeLimit(time: Long, exceptionMsg: () -> String) {
-            if (time == Long.MAX_VALUE) {
+            if (time == CacheConfig.NOT_SET_LONG) {
                 throw IllegalArgumentException(exceptionMsg())
             }
         }

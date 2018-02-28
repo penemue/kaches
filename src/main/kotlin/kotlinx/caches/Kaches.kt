@@ -47,17 +47,23 @@ enum class Eviction {
 
 class CacheConfig<K, V> {
 
-    var size = Int.MAX_VALUE
+    var size = NOT_SET_INT
 
     var eviction = Eviction.RANDOM
 
-    var lifeTime = Long.MAX_VALUE
+    var lifeTime = NOT_SET_LONG
 
-    var idleTime = Long.MAX_VALUE
+    var idleTime = NOT_SET_LONG
 
     var getValue: suspend (K) -> V? = { throw IllegalArgumentException("Cached value lambda should be set") }
 
     var evictListener: (suspend (K, V?) -> Unit)? = null
 
     var currentTimeMillis: () -> Long = { throw IllegalArgumentException("Current time lambda should be set"); }
+
+    companion object {
+
+        const val NOT_SET_INT = Int.MAX_VALUE
+        const val NOT_SET_LONG = Long.MAX_VALUE
+    }
 }
