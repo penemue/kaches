@@ -63,7 +63,7 @@ internal class LRUEvictionCache<K, V>(config: CacheConfig<K, V>) : CacheBase<K, 
         }
     }
 
-    suspend override fun evict(key: K, entry: ValueEntry<V>) {
+    override suspend fun evict(key: K, entry: ValueEntry<V>) {
         val lruEntry = entry as LRUValueEntry<*, *>
         lruEntry.queue.remove(lruEntry)
         super.evict(key, entry)
