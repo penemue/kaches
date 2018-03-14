@@ -17,7 +17,6 @@ package kotlinx.caches
 
 private class IdleTimeValueEntry<K, out V>(private val config: CacheConfig<K, V>, value: V?) : ValueEntry<V>(value) {
 
-    @Volatile
     private var lastUsedTime = config.currentTimeMillis()
 
     override fun isObsolete() = config.currentTimeMillis() - lastUsedTime > config.idleTime
