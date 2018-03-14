@@ -34,7 +34,7 @@ internal abstract class CacheBase<K, V>(protected val config: CacheConfig<K, V>)
         }
     }
 
-    suspend override fun get(key: K): V? {
+    override suspend fun get(key: K): V? {
         val entry = map[key]
         if (entry != null) {
             if (!entry.isObsolete()) {
@@ -53,7 +53,7 @@ internal abstract class CacheBase<K, V>(protected val config: CacheConfig<K, V>)
         return value
     }
 
-    suspend override fun contains(key: K): Boolean {
+    override suspend fun contains(key: K): Boolean {
         val entry = map[key]
         if (entry != null) {
             if (!entry.isObsolete()) {
@@ -64,7 +64,7 @@ internal abstract class CacheBase<K, V>(protected val config: CacheConfig<K, V>)
         return false
     }
 
-    suspend override fun invalidate(key: K): V? {
+    override suspend fun invalidate(key: K): V? {
         val removedEntry = map.remove(key)
         return removedEntry?.apply { evict(key, this) }?.value
     }
@@ -75,7 +75,7 @@ internal abstract class CacheBase<K, V>(protected val config: CacheConfig<K, V>)
 
     protected open fun touch(entry: ValueEntry<V>) = entry.touch()
 
-    protected suspend open fun evict(key: K, entry: ValueEntry<V>) {
+    protected open suspend fun evict(key: K, entry: ValueEntry<V>) {
         config.evictListener?.invoke(key, entry.value)
     }
 

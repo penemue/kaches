@@ -20,8 +20,8 @@ package kotlinx.caches
  */
 internal class LinkedList {
 
-    var first: Node? = null
-    var last: Node? = null
+    private var first: Node? = null
+    private var last: Node? = null
     var size = 0
 
     fun add(node: Node) {
